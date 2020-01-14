@@ -5,6 +5,7 @@ import logging
 
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import split_entity_id
+from homeassistant.helpers.service import async_call_from_config
 from . import Helper
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,9 +28,9 @@ XIAOMI_COMMANDS_ENCODING = [
 MQTT_COMMANDS_ENCODING = [ENC_RAW]
 
 class Controller():
-    def __init__(self, hass, controller, encoding, controller_data):
+    def __init__(self, hass, controller, encoding, controller_data, controller_service = None):
         if controller not in [
-            BROADLINK_CONTROLLER, XIAOMI_CONTROLLER, MQTT_CONTROLLER]:
+            BROADLINK_CONTROLLER, XIAOMI_CONTROLLER, MQTT_CONTROLLER, 'service']:
             raise Exception("The controller is not supported.")
 
         if controller == BROADLINK_CONTROLLER:
@@ -51,8 +52,15 @@ class Controller():
         self._controller = controller
         self._encoding = encoding
         self._controller_data = controller_data
+        self._controller_service = controller_service
 
     async def send(self, command):
+        if self._controller_service != None:
+            variables = { 'command': command, 'encoding': self._encoding }
+            await async_call_from_config(self.hass, self._controller_service,
+                                         variables = variables, validate_config=False)
+            return
+
         if self._controller == BROADLINK_CONTROLLER:
             if self._encoding == ENC_HEX:
                 try:
