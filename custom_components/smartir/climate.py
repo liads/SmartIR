@@ -5,7 +5,7 @@ import os.path
 
 import voluptuous as vol
 
-from homeassistant.components.climate import ClimateDevice, PLATFORM_SCHEMA
+from homeassistant.components.climate import ClimateEntity, PLATFORM_SCHEMA
 from homeassistant.components.climate.const import (
     HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL,
     HVAC_MODE_DRY, HVAC_MODE_FAN_ONLY, HVAC_MODE_AUTO,
@@ -19,7 +19,7 @@ from homeassistant.helpers.event import async_track_state_change
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.restore_state import RestoreEntity
 from . import COMPONENT_ABS_DIR, Helper
-from .controller import Controller
+from .controller import get_controller
 from .climate_device_data import ClimateDeviceState, ClimateDeviceData
 from homeassistant.helpers.script import Script
 
@@ -30,6 +30,7 @@ DEFAULT_NAME = "SmartIR Climate"
 CONF_UNIQUE_ID = 'unique_id'
 CONF_DEVICE_DATA_PROVIDER = 'device_data_provider'
 CONF_DEVICE_CODE = 'device_code'
+CONF_CONTROLLER_ID = 'controller_id'
 CONF_CONTROLLER_SERVICE = 'controller_service'
 CONF_CONTROLLER_ENCODING = 'controller_encoding'
 CONF_CONTROLLER_DATA = "controller_data"
@@ -47,6 +48,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     vol.Optional(CONF_DEVICE_DATA_PROVIDER, default='file'): cv.string,
     vol.Optional(CONF_DEVICE_CODE): cv.positive_int,
+    vol.Optional(CONF_CONTROLLER_ID): cv.string,
     vol.Optional(CONF_CONTROLLER_SERVICE): cv.SERVICE_SCHEMA,
     vol.Optional(CONF_CONTROLLER_DATA): cv.string,
     vol.Optional(CONF_TEMPERATURE_SENSOR): cv.entity_id,
@@ -77,7 +79,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         hass, config, device_data
     )])
 
-class SmartIRClimate(ClimateDevice, RestoreEntity):
+class SmartIRClimate(ClimateEntity, RestoreEntity):
     def __init__(self, hass, config, device_data):
         self.hass = hass
         self._device_data = device_data
@@ -104,13 +106,16 @@ class SmartIRClimate(ClimateDevice, RestoreEntity):
 
         self._current_device_state = None
 
+        controller_id = config.get(CONF_CONTROLLER_ID)
+        if (controller_id == None):
+          controller_id = self._device_data.supported_controller
+
         #Init the IR/RF controller
-        self._controller = Controller(
+        self._controller = get_controller(
             self.hass,
-            self._device_data.supported_controller, 
+            controller_id, 
             self._device_data.commands_encoding,
-            self._controller_data,
-            config.get(CONF_CONTROLLER_SERVICE))
+            self._controller_data)
             
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -304,21 +309,21 @@ class SmartIRClimate(ClimateDevice, RestoreEntity):
 
     async def send_command(self):
         async with self._temp_lock:
-            self._on_by_remote = False
-            operation_mode = self._hvac_mode
-            fan_mode = self._current_fan_mode
-            target_temperature = self._target_temperature
-
-            new_state = ClimateDeviceState(
-                operation_mode = operation_mode,
-                fan_mode = fan_mode,
-                target_temperature = target_temperature)
-
-            command = self._device_data.get_command(
-                new_state,
-                self._current_device_state)
-
             try:
+                self._on_by_remote = False
+                operation_mode = self._hvac_mode
+                fan_mode = self._current_fan_mode
+                target_temperature = self._target_temperature
+
+                new_state = ClimateDeviceState(
+                    operation_mode = operation_mode,
+                    fan_mode = fan_mode,
+                    target_temperature = target_temperature)
+
+                command = self._device_data.get_command(
+                    new_state,
+                    self._current_device_state)
+
                 await self._controller.send(command)
             except Exception as e:
                 _LOGGER.exception(e)

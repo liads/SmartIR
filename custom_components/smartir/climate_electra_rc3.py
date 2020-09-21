@@ -109,4 +109,4 @@ class ElectraRC3DeviceData(ClimateDeviceData):
         # Code repeats 3 time followed by 4 units mark
         result = encoded + encoded + encoded + [4 * mark]
 
-        return str(result).strip('[] ')
+        return str(result)
