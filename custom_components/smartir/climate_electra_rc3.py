@@ -54,7 +54,8 @@ class ElectraRC3DeviceData(ClimateDeviceData):
             max_temperature = 30,
             precision = 1,
             operation_modes = ['off', 'auto', 'cool', 'heat', 'fan_only', 'dry'],
-            fan_modes = ['auto', 'low', 'mid', 'high'])
+            fan_modes = ['auto', 'low', 'mid', 'high'],
+            swing_modes = ['off','on'])
 
     def get_command(self, target_state : ClimateDeviceState, current_state : ClimateDeviceState):
         mark = _electra_time_unit
@@ -66,6 +67,9 @@ class ElectraRC3DeviceData(ClimateDeviceData):
         code.temperature = int(target_state.target_temperature) - 15
         code.fan = _ElectraFan[target_state.fan_mode].value
         code.mode = _ElectraMode[target_state.operation_mode].value
+
+        if target_state.swing_mode == 'on':
+            code.auto_swing = 1
 
         # If changing from off to on, set the power bit so that the AC toggles its power
         if current_state != None and current_state.operation_mode == 'off' and target_state.operation_mode != 'off':
