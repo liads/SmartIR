@@ -6,6 +6,7 @@ import json
 import logging
 import os.path
 from . import COMPONENT_ABS_DIR, Helper
+from homeassistant.components.climate.const import HVAC_MODES
 from homeassistant.const import STATE_OFF
 
 _LOGGER = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 class ClimateDeviceState:
     operation_mode: str
     fan_mode: str = None
+    swing_mode: str = None
     target_temperature: float = None
 
 @dataclass
@@ -27,6 +29,7 @@ class ClimateDeviceData(ABC):
     precision: float = 1.0
     operation_modes: List[str] = field(default_factory=list)
     fan_modes: List[str] = field(default_factory=list)
+    swing_modes: List[str] = field(default_factory=list)
 
     @abstractmethod
     def get_command(self, target_state : ClimateDeviceState, current_state : ClimateDeviceState):
@@ -79,8 +82,9 @@ class FileClimateDeviceData(ClimateDeviceData):
               min_temperature = device_data['minTemperature'],
               max_temperature = device_data['maxTemperature'],
               precision = device_data['precision'],
-              operation_modes = [STATE_OFF] + device_data['operationModes'],
-              fan_modes = device_data['fanModes'])
+              operation_modes = [STATE_OFF] + [x for x in device_data['operationModes'] if x in HVAC_MODES],
+              fan_modes = device_data['fanModes'],
+              swing_modes = device_data.get('swingModes'))
 
         self._commands = device_data['commands']
  
@@ -93,7 +97,17 @@ class FileClimateDeviceData(ClimateDeviceData):
         target_temperature = '{0:g}'.format(target_state.target_temperature)
 
         if operation_mode.lower() == STATE_OFF:
-            return self._commands['off']
+            return [self._commands['off']]
+
+        command = []
+        if 'on' in self._commands:
+            command.append(self._commands['on'])
+
+        if self.swing_modes:
+            swing_mode = target_state.swing_mode
+            command.append(self._commands[operation_mode][fan_mode][swing_mode][target_temperature])
         else:
-            return self._commands[operation_mode][fan_mode][target_temperature]
+            command.append(self._commands[operation_mode][fan_mode][target_temperature])
+
+        return command
 
