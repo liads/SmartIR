@@ -149,3 +149,18 @@ Contributing to your own code files is welcome. However, we do not accept incomp
 | Code | Supported Models | Controller |
 | ------------- | -------------------------- | ------------- |
 [1140](../codes/fan/1140.json)|SP486, SP483|Broadlink
+
+#### Atomberg
+| Code | Supported Models | Controller |
+| ------------- | -------------------------- | ------------- |
+[1160](../codes/fan/1160.json)|Efficio Fan|Broadlink
+
+#### Argo
+| Code | Supported Models | Controller |
+| ------------- | -------------------------- | ------------- |
+[1180](../codes/fan/1180.json)|Standy|Broadlink
+
+#### DCG
+| Code | Supported Models | Controller |
+| ------------- | -------------------------- | ------------- |
+[1200](../codes/fan/1200.json)|Unknown|Broadlink
