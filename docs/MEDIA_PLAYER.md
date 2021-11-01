@@ -198,6 +198,7 @@ Contributing to your own code files is welcome. However, we do not accept incomp
 | Code | Supported Models | Controller |
 | ------------- | -------------------------- | ------------- |
 [1180](../codes/media_player/1180.json)|55EP640|Broadlink
+[1181](../codes/media_player/1181.json)|43S6500FS|Broadlink
 
 #### Pace
 | Code | Supported Models | Controller |
@@ -244,8 +245,12 @@ Contributing to your own code files is welcome. However, we do not accept incomp
 | ------------- | -------------------------- | ------------- |
 [1360](../codes/media_player/1360.json)| HD27 |Broadlink
 
-
 #### Xiaomi
 | Code | Supported Models | Controller |
 | ------------- | -------------------------- | ------------- |
 [1380](../codes/media_player/1380.json)| MiBox<br>MItv |Broadlink
+
+#### Pioneer
+| Code | Supported Models | Controller |
+| ------------- | -------------------------- | ------------- |
+[1400](../codes/media_player/1400.json)| X-CM56 |Broadlink
