@@ -1,3 +1,5 @@
+from . import Helper
+from .ir_generator import IrGenerator
 from .climate_device_data import ClimateDeviceState, ClimateDeviceData
 from enum import Enum
 import ctypes
@@ -65,14 +67,17 @@ class ElectraRC3DeviceData(ClimateDeviceData):
         code.num = 0
         code.ones1 = 1
         code.temperature = int(target_state.target_temperature) - 15
-        code.fan = _ElectraFan[target_state.fan_mode].value
+
+        if target_state.fan_mode is not None:
+            code.fan = _ElectraFan[target_state.fan_mode].value
+
         code.mode = _ElectraMode[target_state.operation_mode].value
 
         if target_state.swing_mode == 'on':
             code.auto_swing = 1
 
         # If changing from off to on, set the power bit so that the AC toggles its power
-        if current_state != None and current_state.operation_mode == 'off' and target_state.operation_mode != 'off':
+        if current_state is not None and current_state.operation_mode == 'off' and target_state.operation_mode != 'off':
             code.power = 1
 
         encoded = []
@@ -83,32 +88,10 @@ class ElectraRC3DeviceData(ClimateDeviceData):
         # Add 3 units space
         encoded.append(3 * space)
 
-        # Go through the 34 bits of the code, left to right
-        for j in range(33, -1, -1):
-            bit = (code.num >> j) & 1
-            is_last_element_space = encoded[len(encoded) - 1] < 0
-
-            # A one bit translates to one unit low then one unit high (01)
-            if bit == 1:
-                # Need to add space and mark
-                # If last element was space, we need to add time to the last element
-                if is_last_element_space:
-                    encoded[len(encoded) - 1] += space
-                    encoded.append(mark)
-                else:
-                    encoded.append(space)
-                    encoded.append(mark)
-
-            # A zero bit translates to one unit high then one unit low (10)
-            else:
-                # Need to add mark and space
-                # If last element was mark, we need to add time to the last element
-                if not is_last_element_space:
-                    encoded[len(encoded) - 1] += mark
-                    encoded.append(space)
-                else:
-                    encoded.append(mark)
-                    encoded.append(space)
+        # A one bit translates to one unit low then one unit high (01)
+        # A zero bit translates to one unit high then one unit low (10)
+        encoded.extend(IrGenerator.gen_raw_ir_data(space, mark, mark, space, code.num, 34, True))
+        encoded = list(Helper.simplify(encoded))
 
         # Code repeats 3 time followed by 4 units mark
         result = encoded + encoded + encoded + [4 * mark]
