@@ -21,7 +21,7 @@ ENC_HEX = 'Hex'
 ENC_PRONTO = 'Pronto'
 ENC_RAW = 'Raw'
 
-BROADLINK_COMMANDS_ENCODING = [ENC_BASE64, ENC_HEX, ENC_PRONTO]
+BROADLINK_COMMANDS_ENCODING = [ENC_BASE64, ENC_HEX, ENC_PRONTO, ENC_RAW]
 XIAOMI_COMMANDS_ENCODING = [ENC_PRONTO, ENC_RAW]
 MQTT_COMMANDS_ENCODING = [ENC_RAW]
 LOOKIN_COMMANDS_ENCODING = [ENC_PRONTO, ENC_RAW]
@@ -99,6 +99,15 @@ class BroadlinkController(AbstractController):
                 except:
                     raise Exception("Error while converting "
                                     "Pronto to Base64 encoding")
+
+            if self._encoding == ENC_RAW:
+                try:
+                    _command = json.loads(_command)
+                    _command = Helper.raw2broadlink(_command)
+                    _command = b64encode(_command).decode('utf-8')
+                except:
+                    raise Exception("Error while converting "
+                                    "RAW to Base64 encoding")
 
             commands.append('b64:' + _command)
 

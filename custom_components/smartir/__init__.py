@@ -169,3 +169,85 @@ class Helper():
         if remainder:
             packet += bytearray(16 - remainder)
         return packet
+
+    # From: https://github.com/elupus/irgen
+    @staticmethod
+    def gen_broadlink_from_raw(data, repeat=0):
+        """Generate broadlink data from a raw values."""
+        yield from b'\x26'  # IR
+        yield from repeat.to_bytes(1, byteorder='big')  # Repeat
+
+        # all broadlink ir captures will end with
+        # 0x00 0x0d 0x05, which is just a long
+        # trailing silence in the command set.
+        # On generation we just need to ensure
+        # our data ends with silence.
+        trailing_silience = -101502.0
+
+        def encode_one(x):
+            # v = abs(int(i / 32.84))
+            v = abs(round(x * 269 / 8192))
+            if v > 255:
+                yield from b'\x00'
+                yield from v.to_bytes(2, byteorder='big')
+            else:
+                yield from v.to_bytes(1, byteorder='big')
+
+        def encode_list(x):
+            for i in Helper.paired(Helper.simplify(x), trailing_silience):
+                yield from encode_one(i)
+
+        c = bytearray(encode_list(data))
+        count = len(c)
+        yield from count.to_bytes(2, byteorder='little')
+        yield from c
+
+        # calculate total length for padding
+        count += 4  # header+len+trailer
+        count += 4  # rm.send_data() 4 byte header (not seen here)
+        if count % 16:
+            yield from bytearray(16 - (count % 16))
+
+    @staticmethod
+    def raw2broadlink(data, repeat=0):
+        """Generate broadlink from raw data."""
+        return bytes(Helper.gen_broadlink_from_raw(data, repeat))
+
+    # From: https://github.com/elupus/irgen
+    @staticmethod
+    def simplify(x):
+        """
+        Simplify raw string.
+        Combine successive same sign value, drop zeros, drop leading negative
+        """
+        value = 0
+        for i in x:
+            if i == 0:
+                continue
+            elif value == 0:
+                if i > 0:
+                    value = i
+                else:
+                    pass  # leading negative
+            elif (value > 0) == (i > 0):
+                value += i
+            else:
+                yield value
+                value = i
+        if value != 0:
+            yield value
+
+    # From: https://github.com/elupus/irgen
+    @staticmethod
+    def paired(x, silence=0):
+        """Create pairs of on, off."""
+        sign = 1
+        for i in x:
+            if (i < 0) ^ (sign < 0):
+                yield 0.0
+                yield i
+            else:
+                yield i
+                sign = -sign
+        if sign < 0:
+            yield silence
