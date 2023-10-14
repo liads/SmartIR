@@ -70,7 +70,9 @@ class FileClimateDeviceData(ClimateDeviceData):
         # Read file
         with open(device_json_path) as j:
             try:
+                _LOGGER.debug(f"loading json file {device_json_path}")
                 device_data = json.load(j)
+                _LOGGER.debug(f"{device_json_path} file loaded")
             except:
                 _LOGGER.error("The device Json file is invalid")
                 raise
