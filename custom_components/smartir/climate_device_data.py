@@ -2,11 +2,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import List
 
+import aiofiles
 import json
 import logging
 import os.path
 from . import COMPONENT_ABS_DIR, Helper
-from homeassistant.components.climate.const import HVAC_MODES
+from homeassistant.components.climate.const import HVACMode, HVAC_MODES
 from homeassistant.const import STATE_OFF
 
 _LOGGER = logging.getLogger(__name__)
@@ -66,16 +67,19 @@ class FileClimateDeviceData(ClimateDeviceData):
                               "exists on GitHub. If the problem still exists please " \
                               "place the file manually in the proper location.")
                 raise
-     
+
         # Read file
-        with open(device_json_path) as j:
-            try:
+        try:
+            #async with aiofiles.open(device_json_path, mode='r') as j:
+            with open(device_json_path) as j:
                 _LOGGER.debug(f"loading json file {device_json_path}")
+                #content = await j.read()
+                #device_data = json.loads(content)
                 device_data = json.load(j)
                 _LOGGER.debug(f"{device_json_path} file loaded")
-            except:
-                _LOGGER.error("The device Json file is invalid")
-                raise
+        except Exception:
+            _LOGGER.error("The device JSON file is invalid")
+            return
 
         super().__init__(manufacturer = device_data['manufacturer'],
               supported_models = device_data['supportedModels'],
@@ -84,7 +88,7 @@ class FileClimateDeviceData(ClimateDeviceData):
               min_temperature = device_data['minTemperature'],
               max_temperature = device_data['maxTemperature'],
               precision = device_data['precision'],
-              operation_modes = [STATE_OFF] + [x for x in device_data['operationModes'] if x in HVAC_MODES],
+              operation_modes = [HVACMode.OFF] + [x for x in device_data['operationModes'] if x in HVAC_MODES],
               fan_modes = device_data['fanModes'],
               swing_modes = device_data.get('swingModes'))
 
@@ -98,7 +102,7 @@ class FileClimateDeviceData(ClimateDeviceData):
         fan_mode = target_state.fan_mode
         target_temperature = '{0:g}'.format(target_state.target_temperature)
 
-        if operation_mode.lower() == STATE_OFF:
+        if operation_mode.lower() == HVACMode.OFF:
             return [self._commands['off']]
 
         command = []
